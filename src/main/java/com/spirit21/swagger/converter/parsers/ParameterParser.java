@@ -17,12 +17,15 @@ import com.spirit21.swagger.converter.models.Definition;
 import com.spirit21.swagger.converter.models.Parameter;
 import com.spirit21.swagger.converter.models.Tag;
 
+
 /**
  * 
  * @author dsimon
  *
  */
 public class ParameterParser extends AbstractParser {
+	
+	public static String patternstring;
 	
     private Map<String, String> descriptionMap;
     
@@ -31,7 +34,7 @@ public class ParameterParser extends AbstractParser {
     public ParameterParser(Log log, ClassLoader loader, List<Tag> tags, List<Definition> definitions) {
     	super(log, loader, tags, definitions);
     	this.defaultValueMap = new HashMap<>();
-    	
+   	
     }
 
     /**
@@ -51,34 +54,37 @@ public class ParameterParser extends AbstractParser {
      * @throws ParserException
      *             Error while the parsing process
      */
-    public List<Parameter> findParametersInMethodHeader(String header, List<String> imports, String javadoc,
-            String fileName, String packageName) throws ParserException {
-        descriptionMap = getParameterDescriptionMap(javadoc);
-        String regex = "\\((?s:.)*\\)";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(header);
-        while (matcher.find()) {
-            String insideBrackets = header.substring(matcher.start() + 1, matcher.end() - 1);
-            String[] parameters = insideBrackets.split(",");
-            if (parameters != null && parameters.length != 0) {
-                List<Parameter> retParameters = new ArrayList<>();
-                for (String param : parameters) {
-                    if (!param.contains("/* @swagger:ignore */")) {
-                        Parameter parameter = getParameter(param, imports, fileName, packageName);
-                        if (parameter != null) {
-                            retParameters.add(parameter);
-                        }
-                    }
-                }
-                if (!retParameters.isEmpty()) {
-                    return retParameters;
-                } else {
-                    return null;
-                }
-            }
-        }
-        return null;
-    }
+	public List<Parameter> findParametersInMethodHeader(String header, List<String> imports, String javadoc,
+			String fileName, String packageName) throws ParserException {
+
+		createAndSetParameterDescriptionMap(javadoc);
+		
+		String regex = "\\((?s:.)*\\)";
+		Pattern pattern = Pattern.compile(regex);
+		Matcher matcher = pattern.matcher(header);
+		while (matcher.find()) {
+			String insideBrackets = header.substring(matcher.start() + 1, matcher.end() - 1);
+			String[] parameters = insideBrackets.split(",");
+			if (parameters != null && parameters.length != 0) {
+				List<Parameter> retParameters = new ArrayList<>();
+				for (String param : parameters) {
+					if (!param.contains("/* @swagger:ignore */")) {
+						Parameter parameter = getParameter(param, imports, fileName, packageName);
+						if (parameter != null) {
+							retParameters.add(parameter);
+						}
+					}
+				}
+				if (!retParameters.isEmpty()) {
+					return retParameters;
+
+				} else {
+					return null;
+				}
+			}
+		}
+		return null;
+	}
 
     /**
      * Extracts a {@link Parameter} object from a parameter declaration in a
@@ -94,9 +100,9 @@ public class ParameterParser extends AbstractParser {
      * @throws ParserException
      *             Error while the parsing process
      */
-    private Parameter getParameter(String paramUnformatted, List<String> imports, String fileName, String packageName)
+	private Parameter getParameter(String paramUnformatted, List<String> imports, String fileName, String packageName)
 			throws ParserException {
-		
+		getPatternName(paramUnformatted);
 		DataTypeFactory typeHandler = new DataTypeFactory();
 		DefinitionParser definitionParser = new DefinitionParser(log, loader, tags, definitions);
 		Boolean isQueryParam = paramUnformatted.matches(".*@QueryParam\\(\"[^\"]+\"\\).*");
@@ -212,7 +218,7 @@ public class ParameterParser extends AbstractParser {
      *            javadoc section
      * @return Map
      */
-    private Map<String, String> getParameterDescriptionMap(String javadoc) {
+    private void createAndSetParameterDescriptionMap(String javadoc) {
         Map<String, String> map = new HashMap<>();
         String paramRegex = "@param [a-zA-Z0-9]+ " + Regex.DESCRIPTION;
         Pattern pattern = Pattern.compile(paramRegex);
@@ -224,9 +230,10 @@ public class ParameterParser extends AbstractParser {
             for (int i = 1; i < parts.length; i++) {
                 description = description.concat(parts[i] + " ");
             }
+            
             map.put(parts[0], removeUnwantedCharactersFromJavadocDescription(description));
         }
-        return map;
+        this.descriptionMap = map;
     }
     
     /**
@@ -271,7 +278,7 @@ public class ParameterParser extends AbstractParser {
         while(matchDefValueValue.find()) {
         	defaultValueValue.removeAll(defaultValueValue);
         	defaultValueValue.add(matchDefValueValue.group());
-        }
+       }
         Matcher m5 = Pattern.compile(Regex.GETMETHODHEADERPARAMETER).matcher(paramUnformatted);
         while(m5.find() && isQueryParam) {
         	List<String> paramUnformattedTest = new ArrayList<String>();
@@ -294,7 +301,43 @@ public class ParameterParser extends AbstractParser {
         	queryParamValue.add(matchQueryParamValue.group());
         }
 
-        defaultValueMap.put(queryParamValue.toString().replace("[","").replace("]", ""), defaultValueValue.toString().replace("[","").replace("]", ""));       
+        defaultValueMap.put(queryParamValue.toString().replace("[","").replace("]", ""), defaultValueValue.toString().replace("[","").replace("]", ""));
+        
 		return defaultValueMap;   	
+    }
+    
+    /**
+     * Method to obtain the Pattern value
+     * 
+     * @param paramUnformatted
+     * @return
+     */
+    private String getPatternName(String paramUnformatted) {
+    	
+    	
+    	Boolean ispatternParam = paramUnformatted.matches(".*@Pattern\\((\\s?)*regexp(\\s?)*=(\\s?)*\"(\\s?)*(\\[?[ a-zA-Z0-9_]*(-[ a-zA-Z0-9_]*)?\\]?)+(\\s?)\"\\).*");//
+    	
+    	List<String> patternParam = new ArrayList<String>();
+
+        List<String> patternParamValue = new ArrayList<String>();
+    	
+        Matcher m5 = Pattern.compile("@Pattern\\((\\s?)*regexp(\\s?)*=(\\s?)*\"(\\s?)*(\\[?[ a-zA-Z0-9_]*(-[ a-zA-Z0-9_]*)?\\]?)+(\\s?)*\"\\)").matcher(paramUnformatted);//@Pattern\\((\\s?)*regexp(\\s?)*=(\\s?)*\"(\\s?)*[ a-zA-Z0-9_]*(\\s?)*\"\\)
+        while(m5.find() && ispatternParam) {
+        	List<String> paramUnformattedTest = new ArrayList<String>();
+        	paramUnformattedTest.add(m5.group());
+        	for(int i = 0; i < paramUnformattedTest.size(); i++) {
+        		if(paramUnformattedTest.get(i).contains("@Pattern")) {
+        			patternParam.add(paramUnformattedTest.get(i));	
+        		}  		
+        	}
+        }       
+        Matcher matchQueryParamValue = Pattern.compile("(?!(@([a-zA-Z0-9])+)\\((\\s?)*regexp(\\s?)*=(\\s?)*)\"(\\s?)*(\\[?[ a-zA-Z0-9_]*(-[ a-zA-Z0-9_]*)?\\]?)+(\\s?)*\"(?=(\\s?)*\"?(\\s?)*\\))").matcher(patternParam.toString());
+        while(matchQueryParamValue.find()) {
+        	patternParamValue.removeAll(patternParamValue);
+        	patternParamValue.add(matchQueryParamValue.group());
+        	patternstring =  patternParamValue.toString().replace("[","").replace("]", "");
+        }
+        
+        return patternstring;
     }
 }
