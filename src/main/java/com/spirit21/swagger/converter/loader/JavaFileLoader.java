@@ -1,21 +1,27 @@
 package com.spirit21.swagger.converter.loader;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 
+import com.github.javaparser.ParseException;
 import com.spirit21.swagger.converter.Regex;
 import com.spirit21.swagger.converter.models.JavaFile;
 import com.spirit21.swagger.converter.models.Method;
+
+import util.NoCommentJavacodeParser;
 
 /**
  * Provides methods to load java files from a Maven project
@@ -24,7 +30,15 @@ import com.spirit21.swagger.converter.models.Method;
  *
  */
 public class JavaFileLoader extends AbstractLoader {
+	
+	private HashMap<String, String> hm;
 
+	private ClassJavadocLoader classJavadocLoader;
+	private ClassAnnotationLoader classAnnotationLoader;
+	private MethodLoader methodLoader;
+	private ApiJavadocLoader apiJavadocLoader;
+	private ImportLoader importLoader;
+	
     public JavaFileLoader(Log log) {
         super(log);
     }
@@ -38,8 +52,9 @@ public class JavaFileLoader extends AbstractLoader {
      * @return List of java files
      * @throws JavaFileLoadException
      *             An error occured while loading the Java files
+     * @throws ParseException 
      */
-    public List<JavaFile> getJavaFiles(MavenProject project) throws JavaFileLoadException {
+    public List<JavaFile> getJavaFiles(MavenProject project) throws JavaFileLoadException, ParseException {
         try {
             List<Path> javaSourceFiles = new ArrayList<>();
             List<?> rootDirectories = project.getCompileSourceRoots();
@@ -85,23 +100,44 @@ public class JavaFileLoader extends AbstractLoader {
     }
 
     /**
-     * Reads the given Java files and writes javadoc, annotations and imports
-     * for each file to an object
-     * 
-     * @param files
-     *            pathes to Java files
-     * @return list of list of strings
-     * @throws IOException
+     * create Loader structure
      */
-    private List<JavaFile> getInformationFromJavaFiles(List<Path> files) throws IOException {
-        ClassJavadocLoader classJavadocLoader = new ClassJavadocLoader(log);
-        ClassAnnotationLoader classAnnotationLoader = new ClassAnnotationLoader(log);
-        MethodLoader methodLoader = new MethodLoader(log);
-        ApiJavadocLoader apiJavadocLoader = new ApiJavadocLoader(log);
-        ImportLoader importLoader = new ImportLoader(log);
-        List<JavaFile> javaFiles = new ArrayList<>();
-        for (Path file : files) {
-            String fileString = fileAsString(Files.readAllLines(file));
+    private void createLoaders() {
+    	this.classJavadocLoader = new ClassJavadocLoader(log);
+    	this.classAnnotationLoader = new ClassAnnotationLoader(log);
+    	this.methodLoader = new MethodLoader(log);
+    	this.apiJavadocLoader = new ApiJavadocLoader(log);
+    	this.importLoader = new ImportLoader(log);
+    }
+    
+	/**
+	 * Reads the given Java files and writes javadoc, annotations and imports for
+	 * each file to an object
+	 * 
+	 * @param files
+	 *            pathes to Java files
+	 * @return list of list of strings
+	 * @throws IOException
+	 * @throws ParseException 
+	 */
+	private List<JavaFile> getInformationFromJavaFiles(List<Path> files) throws IOException, ParseException {
+		createLoaders();
+		eraseComments(files);
+
+		List<JavaFile> javaFiles = new ArrayList<>();
+
+		for (Path file : files) {
+
+			String fileString = fileAsString(Files.readAllLines(file));
+//			try {
+//				String noComment = NoCommentJavacodeParser
+//						.parse(new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
+//				log.info(noComment);
+//			} catch (ParseException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+            
 
             if (ignoreJavaFile(fileString)) {
                 continue;
@@ -158,6 +194,7 @@ public class JavaFileLoader extends AbstractLoader {
      * @return package or null
      */
     private String getPackageNameFromFile(String fileString) {
+    	
         Pattern pattern = Pattern.compile(Regex.PACKAGE);
         Matcher matcher = pattern.matcher(fileString);
         if (matcher.find()) {
@@ -178,5 +215,30 @@ public class JavaFileLoader extends AbstractLoader {
             ret = ret.concat(line + " ");
         }
         return ret;
+    }
+    
+    /**
+     * Creates a Hashmap that maps each Method to its javadoc comments
+     * @param files
+     * @return
+     * @throws IOException
+     * @throws ParseException
+     */
+    public Map<String, String> eraseComments(List<Path> files) throws IOException, ParseException {
+    	Map<String, String> map = new HashMap<>();
+    	
+    	for (Path file : files) {
+    		String fileString = fileAsString(Files.readAllLines(file));
+    		
+    			String noComment = NoCommentJavacodeParser
+    					.parse(new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
+  
+    		String classJavadoc = classJavadocLoader.getClassJavadocFromJavaFile(fileString);
+    		map.put(noComment.toString(), classJavadoc);
+   		for (Map.Entry<String, String> entry : map.entrySet()) {
+   		    log.info("key=" + entry.getKey() + ", value=" + entry.getValue());
+    		}
+    	}
+		return hm;
     }
 }
