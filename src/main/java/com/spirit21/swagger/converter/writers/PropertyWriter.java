@@ -6,6 +6,7 @@ import org.apache.maven.plugin.logging.Log;
 import org.json.JSONObject;
 
 import com.spirit21.swagger.converter.models.Property;
+import com.spirit21.swagger.converter.parsers.ParameterParser;
 
 /**
  * 
