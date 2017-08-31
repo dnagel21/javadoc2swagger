@@ -25,7 +25,7 @@ import com.spirit21.swagger.converter.models.Tag;
  */
 public class ParameterParser extends AbstractParser {
 	
-	public static String patternstring;
+	public static String patternStringForNameParam;
 	
     private Map<String, String> descriptionMap;
     
@@ -335,9 +335,9 @@ public class ParameterParser extends AbstractParser {
         while(matchQueryParamValue.find()) {
         	patternParamValue.removeAll(patternParamValue);
         	patternParamValue.add(matchQueryParamValue.group());
-        	patternstring =  patternParamValue.toString().replace("[","").replace("]", "");
+        	patternStringForNameParam =  patternParamValue.toString().replace("[","").replace("]", "");
         }
         
-        return patternstring;
+        return patternStringForNameParam;
     }
 }

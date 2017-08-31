@@ -25,8 +25,8 @@ public class PropertyWriter extends AbstractWriter {
      *            list of {@link Property} objects
      * @return JSON for properties
      */
-        public JSONObject mapProperties(List<Property> properties) {
-    	String patternstring = ParameterParser.patternstring;
+    public JSONObject mapProperties(List<Property> properties) {
+    	String patternStringForNameParam = ParameterParser.patternStringForNameParam;
     	JSONObject obj = new JSONObject();
     	for (Property property : properties) {
     		JSONObject prop = new JSONObject();
@@ -55,10 +55,9 @@ public class PropertyWriter extends AbstractWriter {
     			prop.put("items", items);
     		}
     		obj.put(property.getName(), prop);
-    		for(int i = 0; i < obj.names().length(); i++) {
-    			if(property.getName().equals("name") && obj.names().getString(i).contains("name") && type.contains("string")) {
-    				prop.put("pattern", patternstring );
-    			}
+    		if(property.getName().equals("name")) {
+    			prop.put("pattern", patternStringForNameParam );
+
     		}
     	}
     	return obj;
