@@ -7,13 +7,13 @@ package com.spirit21.swagger.converter.models;
  */
 public class Parameter {
 
-    private String     name;
-    private String     defaultValue;
-    private String     type;
-    private String     format;
-    private String     location;
-    private String     description;
-    private Boolean    required;
+    private String name;
+    private String defaultValue;
+    private String type;
+    private String format;
+    private String location;
+    private String description;
+    private Boolean required;
     private Definition definition;
 
     public String getName() {
@@ -72,11 +72,10 @@ public class Parameter {
         this.definition = definition;
     }
 
-    public String getDefaultValue() {
-        return defaultValue;
-    }
-
-    public void setDefaultValue(String defaultValue) {
+	public String getDefaultValue() {
+		return defaultValue;
+	}
+	public void setDefaultValue(String defaultValue) {
         this.defaultValue = defaultValue;
     }
 }
