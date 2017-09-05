@@ -17,6 +17,7 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 
 import com.github.javaparser.ParseException;
+import com.google.inject.internal.util.Strings;
 import com.spirit21.swagger.converter.Regex;
 import com.spirit21.swagger.converter.models.JavaFile;
 import com.spirit21.swagger.converter.models.Method;
@@ -31,8 +32,6 @@ import util.NoCommentJavacodeParser;
  */
 public class JavaFileLoader extends AbstractLoader {
 	
-	private HashMap<String, String> hm;
-
 	private ClassJavadocLoader classJavadocLoader;
 	private ClassAnnotationLoader classAnnotationLoader;
 	private MethodLoader methodLoader;
@@ -122,24 +121,20 @@ public class JavaFileLoader extends AbstractLoader {
 	 */
 	private List<JavaFile> getInformationFromJavaFiles(List<Path> files) throws IOException, ParseException {
 		createLoaders();
-		eraseComments(files);
-
+//		eraseComments(files);
+//		String withoutComments = "";
+//		for (Map.Entry<String, String> entry : eraseComments(files).entrySet()) {
+//			withoutComments += entry.getValue() + "\n" + entry.getKey(); 
+//		}
+//		log.info(withoutComments); // <- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		
 		List<JavaFile> javaFiles = new ArrayList<>();
 
 		for (Path file : files) {
 
-			String fileString = fileAsString(Files.readAllLines(file));
-//			try {
-//				String noComment = NoCommentJavacodeParser
-//						.parse(new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
-//				log.info(noComment);
-//			} catch (ParseException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-            
+			String fileString = NoCommentJavacodeParser.parseToJavaCodeWithJavaDoc(file);
 
-            if (ignoreJavaFile(fileString)) {
+			if (ignoreJavaFile(fileString)) {
                 continue;
             }
 
@@ -209,36 +204,37 @@ public class JavaFileLoader extends AbstractLoader {
      * @param file
      * @return string
      */
-    private String fileAsString(List<String> file) {
-        String ret = "";
-        for (String line : file) {
+    private String stringWithoutNewLines(String file) {
+    	String[] byLine = file.split("\\n");
+    	String ret = "";
+        for (String line : byLine) {
             ret = ret.concat(line + " ");
         }
         return ret;
     }
     
-    /**
-     * Creates a Hashmap that maps each Method to its javadoc comments
-     * @param files
-     * @return
-     * @throws IOException
-     * @throws ParseException
-     */
-    public Map<String, String> eraseComments(List<Path> files) throws IOException, ParseException {
-    	Map<String, String> map = new HashMap<>();
-    	
-    	for (Path file : files) {
-    		String fileString = fileAsString(Files.readAllLines(file));
-    		
-    			String noComment = NoCommentJavacodeParser
-    					.parse(new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
-  
-    		String classJavadoc = classJavadocLoader.getClassJavadocFromJavaFile(fileString);
-    		map.put(noComment.toString(), classJavadoc);
-   		for (Map.Entry<String, String> entry : map.entrySet()) {
-   		    log.info("key=" + entry.getKey() + ", value=" + entry.getValue());
-    		}
-    	}
-		return hm;
-    }
+//    /**
+//     * Creates a Hashmap that maps each Method to its javadoc comments
+//     * @param files
+//     * @return
+//     * @throws IOException
+//     * @throws ParseException
+//     */
+//    public Map<String, String> eraseComments(List<Path> files) throws IOException, ParseException {
+//    	Map<String, String> map = new HashMap<>();
+//    	
+//    	for (Path file : files) {
+//    		String fileString = fileAsString(Files.readAllLines(file));
+//    		
+//    			String noComment = NoCommentJavacodeParser
+//    					.parse(new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
+//  
+//    		String classJavadoc = classJavadocLoader.getClassJavadocFromJavaFile(fileString);
+//    		map.put(noComment.toString(), classJavadoc);
+////   		for (Map.Entry<String, String> entry : map.entrySet()) {
+////   		    log.info("key=" + entry.getKey() + ", value=" + entry.getValue());
+////    		}
+//    	}
+//		return map;
+//    }
 }

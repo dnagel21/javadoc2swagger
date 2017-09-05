@@ -1,8 +1,20 @@
 package util;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseException;
@@ -25,18 +37,60 @@ limitations under the License.
 */
 public class NoCommentJavacodeParser {
 	
+	public static String parseToJavaCodeWithJavaDoc(Path javaCodeWithComments) {
+	    // möglichkeoit: paket übergeben dann (bookmarks) classen finden dann methoden finden aber wie dann javadoc extrahieren und vergliechen?
+	    //reflection findet methoden aus klassen... hilft das weiter?
+	    try {
+            String javaCodeWithoutComments = parse(javaCodeWithComments);
+        } catch (ParseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+	    
+	    
+	    File fileWithComments=  javaCodeWithComments.toFile();
+
+    
+		List<String> meth = new ArrayList<String>();
+		Method[] mthd = Class.class.getDeclaredMethods();
+		for(Method m : mthd) {
+			meth.add(m.toString());
+		}
+		return meth;
+		
+//		try {
+//			String withoutComments = parse(javaCodeWithComments);
+//		} catch (ParseException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+
+		}
+		
 	/**
 	 * Gets a file and removes all of the comments - javadoc-,block- and linecomments
 	 * @param javaCodeWithComments
 	 * @return
 	 * @throws ParseException
 	 */
-	public static String parse(String javaCodeWithComments) throws ParseException {
-        InputStream in = new ByteArrayInputStream(javaCodeWithComments.getBytes(StandardCharsets.UTF_8));
-        CompilationUnit cu = JavaParser.parse(in);
-        removeComments(cu);
-        return cu.toString();
+	private static String parse(Path javaCodeWithComments) throws ParseException {
+		FileInputStream fis;
+		try {
+			fis = new FileInputStream(javaCodeWithComments.toFile());
+			CompilationUnit cu = JavaParser.parse(fis);
+	        removeComments(cu);
+	        return cu.toString();
+	    } catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+        //InputStream in = new ByteArrayInputStream(javaCodeWithComments.getBytes(StandardCharsets.UTF_8));
     }
+	
+	private static String addJavaDocToCodeWithoutComments(String noCommentFile, String withCommentFile) {
+		return null;
+	}
 	
 	/**
 	 * @param node
@@ -47,5 +101,5 @@ public class NoCommentJavacodeParser {
             removeComments(child);
         }
     }
-
+	
 }
