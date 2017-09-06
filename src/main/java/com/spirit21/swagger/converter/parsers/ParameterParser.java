@@ -30,10 +30,13 @@ public class ParameterParser extends AbstractParser {
     private Map<String, String> descriptionMap;
     
     private Map<String, String> defaultValueMap;
+    
+    private Map<String, String> patternMap;
 
     public ParameterParser(Log log, ClassLoader loader, List<Tag> tags, List<Definition> definitions) {
     	super(log, loader, tags, definitions);
     	this.defaultValueMap = new HashMap<>();
+    	this.patternMap = new HashMap<>();
    	
     }
 
@@ -102,7 +105,7 @@ public class ParameterParser extends AbstractParser {
      */
 	private Parameter getParameter(String paramUnformatted, List<String> imports, String fileName, String packageName)
 			throws ParserException {
-		getPatternName(paramUnformatted);
+		getQueryPatternName(paramUnformatted);
 		DataTypeFactory typeHandler = new DataTypeFactory();
 		DefinitionParser definitionParser = new DefinitionParser(log, loader, tags, definitions);
 		Boolean isQueryParam = paramUnformatted.matches(".*@QueryParam\\(\"[^\"]+\"\\).*");
@@ -307,37 +310,59 @@ public class ParameterParser extends AbstractParser {
     }
     
     /**
-     * Method to obtain the Pattern value
+     * Method to obtain the Pattern value only for a Query Parameter
+     * (Could be, that there are also other Parameter which use a pattern, did not test it here)
+     * 
      * 
      * @param paramUnformatted
      * @return
      */
-    private String getPatternName(String paramUnformatted) {
-    	
-    	
-    	Boolean ispatternParam = paramUnformatted.matches(".*@Pattern\\((\\s?)*regexp(\\s?)*=(\\s?)*\"(\\s?)*(\\[?[ a-zA-Z0-9_]*(-[ a-zA-Z0-9_]*)?\\]?)+(\\s?)\"\\).*");//
-    	
-    	List<String> patternParam = new ArrayList<String>();
+    private void getQueryPatternName(String paramUnformatted) {
+
+        Boolean ispatternParam = paramUnformatted.matches(Regex.ISPATTERNPARAM);
 
         List<String> patternParamValue = new ArrayList<String>();
-    	
-        Matcher m5 = Pattern.compile("@Pattern\\((\\s?)*regexp(\\s?)*=(\\s?)*\"(\\s?)*(\\[?[ a-zA-Z0-9_]*(-[ a-zA-Z0-9_]*)?\\]?)+(\\s?)*\"\\)").matcher(paramUnformatted);//@Pattern\\((\\s?)*regexp(\\s?)*=(\\s?)*\"(\\s?)*[ a-zA-Z0-9_]*(\\s?)*\"\\)
-        while(m5.find() && ispatternParam) {
-        	List<String> paramUnformattedTest = new ArrayList<String>();
-        	paramUnformattedTest.add(m5.group());
-        	for(int i = 0; i < paramUnformattedTest.size(); i++) {
-        		if(paramUnformattedTest.get(i).contains("@Pattern")) {
-        			patternParam.add(paramUnformattedTest.get(i));	
-        		}  		
-        	}
-        }       
-        Matcher matchQueryParamValue = Pattern.compile("(?!(@([a-zA-Z0-9])+)\\((\\s?)*regexp(\\s?)*=(\\s?)*)\"(\\s?)*(\\[?[ a-zA-Z0-9_]*(-[ a-zA-Z0-9_]*)?\\]?)+(\\s?)*\"(?=(\\s?)*\"?(\\s?)*\\))").matcher(patternParam.toString());
-        while(matchQueryParamValue.find()) {
-        	patternParamValue.removeAll(patternParamValue);
-        	patternParamValue.add(matchQueryParamValue.group());
-        	patternStringForNameParam =  patternParamValue.toString().replace("[","").replace("]", "");
+        List<String> queryParam = new ArrayList<String>();
+        List<String> queryParamValue = new ArrayList<String>();
+
+        String[] test = paramUnformatted.split("\\s+");
+
+        for (int x = 0; x < test.length - 1; x++) {
+
+            Matcher atQueryParamMatcher = Pattern.compile("@QueryParam\\(\\\"[a-zA-Z0-9)]+\\\"\\)").matcher(test[x]);
+            while (atQueryParamMatcher.find()) {
+                List<String> paramUnformattedTest = new ArrayList<String>();
+                paramUnformattedTest.add(atQueryParamMatcher.group());
+
+                for (int i = 0; i < paramUnformattedTest.size(); i++) {
+                    if (paramUnformattedTest.get(i).contains("@QueryParam")) {
+                        queryParam.add(paramUnformattedTest.get(i));
+
+                    }
+                    for (int j = 0; j < queryParam.size(); j++) {
+                        Matcher matchQueryParamValue = Pattern.compile(Regex.GETMETHODHEADERPARAMETERINSIDE)
+                                .matcher(queryParam.toString());
+                        while (matchQueryParamValue.find()) {
+                            queryParamValue.removeAll(queryParamValue);
+                            queryParamValue.add(matchQueryParamValue.group());
+                        }
+                    }
+                }
+            }
+
+            Matcher patternMatcher = Pattern.compile(Regex.PATTERNMATCHERAFTERSPLIT).matcher(test[x]);
+            while (patternMatcher.find() && ispatternParam) {
+
+                Matcher patternMatcher2 = Pattern.compile("(\\\"([a-zA-Z0-9])+\\\")(?=\\))").matcher(test[x + 2]);
+                while (patternMatcher2.find()) {
+
+                    patternParamValue.add(patternMatcher2.group());
+                }
+            }
         }
-        
-        return patternStringForNameParam;
+        this.patternMap.put(queryParamValue.toString().replace("[", "").replace("]", ""),
+                patternParamValue.toString().replace("[", "").replace("]", ""));
+        this.patternMap.remove("");
+        log.info(patternMap.toString() + " <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     }
 }
